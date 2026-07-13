@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Youssef Mohamed — Developer Portfolio</title>
+
+<link rel="apple-touch-icon" href="/static/favicon/apple-touch-icon.png"
+<link rel="icon" type="image/x-icon" href="/static/favicon/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/favicon/icon-192.png">
+
+<meta name="description" content="Portfolio showcasing projects, tech stacks, and case studies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<header class="nav" id="top">
+  <div class="nav-inner">
+    <a href="#top" class="nav-brand">
+      <span class="nav-brand-dot"></span>
+      <span id="navName"></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#projects">projects</a>
+      <a href="#about">about</a>
+      <a href="#contact">contact</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="terminal" id="heroTerminal">
+      <div class="terminal-bar">
+        <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+        <span class="terminal-title">zsh — profile.sh</span>
+      </div>
+      <div class="terminal-body" id="terminalBody">
+        <!-- typed by JS -->
+      </div>
+    </div>
+
+    <div class="hero-side">
+      <p class="eyebrow">available for work</p>
+      <h1 class="hero-title" id="heroName"></h1>
+      <p class="hero-role" id="heroRole"></p>
+      <p class="hero-desc" id="heroDesc">
+        AI Engineer building production-ready backend systems — LLM
+        pipelines, automation platforms, and scalable APIs that turn
+        unstructured data into real business value.
+      </p>
+      <div class="hero-actions">
+        <a href="#projects" class="btn btn-primary">View projects</a>
+        <a href="#contact" class="btn btn-ghost">Get in touch</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll">scroll <span>↓</span></div>
+</section>
+
+<!-- ================= PROJECTS ================= -->
+<section class="projects" id="projects">
+  <div class="section-head">
+    <p class="eyebrow">the work</p>
+    <h2>Projects</h2>
+    <p class="section-sub">Click a card to open the full write-up — README, stack, and screenshots.</p>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <!-- tech filter chips injected by JS -->
+  </div>
+
+  <div class="cards" id="cardsGrid">
+    <!-- project index cards injected by JS -->
+  </div>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section class="about" id="about">
+  <div class="about-inner">
+    <div class="about-text">
+      <p class="eyebrow">about</p>
+      <h2>A little context</h2>
+      <p id="aboutBody">
+        Write a couple of paragraphs here about who you are, what you like building,
+        and how you work. Keep it human — this is the part visitors read to decide
+        whether they want to work with you.
+      </p>
+      <div class="skills" id="skillsList">
+        <!-- skill pills injected by JS -->
+      </div>
+    </div>
+    <div class="about-card">
+      <div class="about-card-row"><span>Location</span><b id="aboutLocation">Cairo, Egypt</b></div>
+      <div class="about-card-row"><span>Focus</span><b id="aboutFocus">Web Applications</b></div>
+      <div class="about-card-row"><span>Experience</span><b id="aboutExperience">2+ years</b></div>
+      <div class="about-card-row"><span>Status</span><b class="status-dot">Open to work</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACT ================= -->
+<section class="contact" id="contact">
+  <div class="contact-inner">
+    <p class="eyebrow">say hello</p>
+    <h2>Let's build something.</h2>
+    <p class="section-sub">Open to freelance work, collaborations, and full-time roles.</p>
+    <div class="contact-links" id="contactLinks">
+      <!-- injected by JS -->
+    </div>
+  </div>
+  <footer class="footer">
+    <span id="footerName">Your Name</span> · built with plain HTML/CSS/JS · <span id="footerYear"></span>
+  </footer>
+</section>
+
+<!-- ================= PROJECT MODAL ================= -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+
+    <div class="modal-head">
+      <p class="modal-eyebrow" id="modalEyebrow">project</p>
+      <h3 id="modalTitle">Project title</h3>
+      <p class="modal-tagline" id="modalTagline">One-line description</p>
+      <div class="modal-links" id="modalLinks"></div>
+    </div>
+
+    <div class="modal-tabs" id="modalTabs">
+      <button class="tab-btn active" data-tab="readme">README</button>
+      <button class="tab-btn" data-tab="media">Media</button>
+      <button class="tab-btn" data-tab="stack">Stack</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="tab-panel active" id="tab-readme"></div>
+      <div class="tab-panel" id="tab-media"></div>
+      <div class="tab-panel" id="tab-stack"></div>
+    </div>
+  </div>
+</div>
+<!-- =========================================================================
+     VOICE CHAT WIDGET — floating button + modal
+     Paste this block right before </body>, after your existing
+     modal-overlay div and before your <script> tags.
+     ========================================================================= -->
+
+<!-- Floating trigger button, sits in the corner on every section -->
+<button class="voice-fab" id="voiceFab" aria-label="Talk with Youssef AI">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z" fill="currentColor"/>
+    <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11z" fill="currentColor"/>
+  </svg>
+  <span class="voice-fab-label">Talk with Youssef AI</span>
+</button>
+
+<!-- Voice chat modal, hidden until the fab is clicked -->
+<div class="voice-modal-overlay" id="voiceModalOverlay">
+  <div class="voice-modal" role="dialog" aria-modal="true" aria-label="Talk with Youssef AI">
+    <button class="voice-modal-close" id="voiceModalClose" aria-label="Close">✕</button>
+
+    <p class="eyebrow">ai digital twin</p>
+    <h3 class="voice-modal-title">Talk with Youssef AI</h3>
+
+    <div class="orb-wrap">
+      <div class="orb-rings">
+        <span class="ring ring-1"></span>
+        <span class="ring ring-2"></span>
+        <span class="ring ring-3"></span>
+      </div>
+      <button class="orb" id="orbBtn" aria-label="Start talking">
+        <svg id="orbMicIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z" fill="currentColor"/>
+          <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="voice-status" id="voiceStatus">Hold the orb to talk</p>
+
+    <div class="voice-conversation" id="voiceConversation" aria-live="polite">
+      <p class="voice-conversation-empty" id="voiceConversationEmpty">Your conversation will appear here</p>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/data.js"></script>
+<script src="/static/js/script.js"></script>
+<script src="/static/js/voice-widget.js"></script>
+</body>
+</html>

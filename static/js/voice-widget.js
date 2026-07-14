@@ -215,7 +215,7 @@ let sessionId = null;
 
       sessionId = result.session_id;
 
-      const said = result.transcript || "";
+      const said = result.transcription || "";
       const textResponse = result.answer || "";
 
       // Show the text turn right away…

@@ -44,27 +44,21 @@ Rules:
 
 2. If the user asks multiple questions, keep ONLY the FIRST question.
 
-Example:
-Question:
-What technologies did you use and what challenges did you face?
-
-Output:
-What technologies were used in the NarrIQ project?
-
 3. Always return the query in English.
 
 4. If the original question is in Arabic, translate it to natural English.
 
-5. If the user refers to:
+5. Resolve pronouns only.
+
+If the user says:
 - it
 - this
 - that
-- the project
 - the company
-or omits the entity,
-replace it with the Current Topic.
 
-6. If Current Topic is available, the rewritten query MUST explicitly contain it.
+replace them with Current Topic.
+
+6. If the user's question is generic (for example: "all projects", "your skills", "your education", "tell me about yourself"), NEVER inject the current topic.
 
 7. Preserve the user's intent.
 
@@ -113,6 +107,26 @@ Output:
 Could you explain the DataWhisperer project?
 
 Rewrite the following question.
+
+Examples:
+
+User:
+What are all projects did you work on?
+
+Correct:
+What projects has Youssef Mohamed worked on?
+
+Wrong:
+Portfolio AI Assistant projects
+
+Topic:
+Portfolio AI Assistant
+
+Question:
+Tell me about your education.
+
+Output:
+Tell me about Youssef Mohamed's education.
 
 Question:
 {question}

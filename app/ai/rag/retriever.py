@@ -12,7 +12,7 @@ class Retriever:
     async def search(
         self,
         query: str,
-        limit: int = 5,
+        limit: int = 10,
         category: str | None = None
     ):
 

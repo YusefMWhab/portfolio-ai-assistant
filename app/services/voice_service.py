@@ -5,29 +5,17 @@ from app.ai.stt import SpeechToText
 from app.services.chat_service import ChatService
 from app.ai.tts import TextToSpeech
 from app.ai.conversation.manager import ConversationManager
+from fastapi import HTTPException
 
 import logging
-from time import perf_counter
-import os
-os.makedirs("logs", exist_ok=True)
+logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    handlers=[
-        logging.FileHandler("logs/performance.log", encoding="utf-8"),
-        logging.StreamHandler()   # يخليها تظهر في التيرمينال كمان
-    ]
-)
-
-logger = logging.getLogger("performance")
 
 class VoiceService:
 
     def __init__(self):
         
         self.conversation = ConversationManager()
-        
 
         self.stt = SpeechToText()
 
@@ -36,35 +24,57 @@ class VoiceService:
         self.tts = TextToSpeech()
 
     async def process_voice(self, audio: UploadFile, session_id: str | None):
+        logger.info("Getting session & session limit")
+        session = self.conversation.get_or_create(session_id)
+        limit_reached = self.conversation.is_limit_reached(session.session_id)    
 
-        total_start = perf_counter()
+        if limit_reached:
+            logger.warning("Session limit reached")
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "session_limit_reached",
+                    "message": "We've reached the question limit for this conversation. Refresh the page to start a new chat."
+                }
+            )
 
         # =====================
         # Read Audio
         # ====================
-        start = perf_counter()
+        logger.info("Starting reading audio")
         audio_bytes = await audio.read()
-        logger.info(f"[READ AUDIO] {(perf_counter() - start):.3f}s")
+        if not audio_bytes:
+            logger.warning("Read audio failed")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "empty_audio",
+                     "message": "I couldn't hear anything. Please try recording your question again."
+                }
+            )  
 
         # =====================
         # STT
         # =====================
-        start = perf_counter()
-        stt_result = await self.stt.transcribe(audio_bytes=audio_bytes, mime_type=audio.content_type)
-        transcript = stt_result.transcript
-        language = stt_result.language
-        stt_time = perf_counter() - start
-
-        logger.info(
-            f"[STT] {stt_time:.3f}s | "
-            f"Lang={language} | "
-            f'Text="{transcript}"'
-        )
+        try:
+            logger.info("Starting STT")
+            stt_result = await self.stt.transcribe(audio_bytes=audio_bytes, mime_type=audio.content_type)
+            transcript = stt_result.transcript
+            language = stt_result.language
+        except Exception:
+            logger.exception("STT failed")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "speech_recognition_failed",
+                    "message": "Sorry, I couldn't understand your voice. Could you try saying that again?"
+                }
+            )
 
         # =====================
         # Session
         # =====================
-        session = self.conversation.get_or_create(session_id)
+        
         self.conversation.set_language(
             session.session_id,
             language
@@ -73,29 +83,67 @@ class VoiceService:
         # =====================
         # LLM
         # =====================
-        start = perf_counter()
-        answer = await self.chat.ask(transcript, session_id=session.session_id)
-        llm_time = perf_counter() - start
-        logger.info(
-            f"[LLM] {llm_time:.3f}s | "
-        )
+        try:
+            logger.info("Starting LLM & Retrieve pipline")
+            answer = await self.chat.ask(transcript, session_id=session.session_id)
+        except Exception:
+            logger.exception("LLM & Retrieve pipline failed")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "llm_failed",
+                    "message": "Sorry, I ran into a problem while generating my response. Please try again in a moment."
+                }
+            )
 
         # =====================
-        # TTS
+        # Get remaining quota
         # =====================
-        start = perf_counter()
-        audio_response_base64_str = await self.tts.generateAudio(answer, language)
-        tts_time = perf_counter() - start
-
-        logger.info(
-            f"[TTS] {tts_time:.2f}s | "
-            f"chars={len(answer)} | "
-        )
+        remaining_quota = self.conversation.get_session_quota(session_id=session.session_id)
         
-        # 7. Return the final results
+        # =====================
+        # Final result ( Text answers & Session ID & Transcription)
+        # =====================
         return VoiceResponse(
             session_id=session.session_id,
             transcription=transcript,
             answer=answer,
-            audio_base64=audio_response_base64_str
+            remaining_questions=remaining_quota
         )
+    
+    # =====================
+    # TTS & Audio Generation
+    # =====================
+    def stream_audio(self, session_id: str | None):
+        
+        if not session_id:
+            return
+        
+        answer = self.conversation.get_last_assistant_message(session_id)
+        language = self.conversation.get_language(session_id)
+
+
+        if not answer:
+            return
+
+        try:
+            logger.info("Starting TTS")
+            tts_result = self.tts.generateStream(answer, language)
+
+        except Exception:
+            logger.exception("TTS failed")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "text_to_speach_failed",
+                    "message": "I couldn't generate the voice response, but you can still read my answer above."
+                }
+            )
+
+        return tts_result
+    
+    # =====================
+    # End Session
+    # =====================
+    def end_session(self, session_id: str | None):
+        self.conversation.end_session(session_id)

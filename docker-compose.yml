@@ -1,0 +1,55 @@
+services:
+
+  web:
+    build: .
+    container_name: portfolio-ai
+
+    environment:
+      - PYTHONPATH=/app
+
+    env_file:
+      - .env
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      - qdrant
+
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+
+    container_name: portfolio-qdrant
+
+    ports:
+      - "6333:6333"
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: portfolio-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/app/static:ro
+      # الربط ده مهم جداً عشان الـ Nginx يشوف شهادات الـ SSL من السيرفر:
+      - /home/ubuntu/narriq/certbot/conf:/etc/letsencrypt:ro
+      - /home/ubuntu/narriq/certbot/www:/var/www/certbot
+
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:

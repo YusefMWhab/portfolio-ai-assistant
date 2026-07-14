@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 
-from app.core.config import settings
+from app.core.settings import settings
 
 
 class GeminiProvider:
@@ -66,12 +66,14 @@ Rules:
                 )
             )
         )
-
-        response = await self.client.aio.models.generate_content(
-            model=settings.GEMINI_MODEL_TTS, 
-            contents=text,
-            config=config
-        )
+        try:
+            response = await self.client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL_TTS, 
+                contents=text,
+                config=config
+            )
+        except Exception as e:
+            raise ValueError(f"Gemini did not return response: {e}")
 
         try:
             audio_part = response.candidates[0].content.parts[0]
@@ -81,3 +83,15 @@ Rules:
                 raise ValueError("Gemini did not return inline audio data.")
         except (IndexError, AttributeError) as e:
             raise RuntimeError(f"Failed to extract audio from Gemini response: {str(e)}")
+    
+    async def embed_text(
+        self,
+        text: str
+    ) -> list[float]:
+
+        response = self.client.models.embed_content(
+            model=settings.GEMINI_EMBEDDING_MODEL,
+            contents=text
+        )
+
+        return response.embeddings[0].values

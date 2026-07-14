@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     GEMINI_MODEL_TTS: str = "gemini-2.5-flash-preview-tts"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-2"
 
+    # Vector Data Base
+    #QDRANT_HOST: str = "qdrant"
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION: str = "portfolio_knowledge"
+
     class Config:
         env_file = ".env"
 

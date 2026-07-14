@@ -1,4 +1,7 @@
 from qdrant_client import QdrantClient
+from app.core.settings import settings
+
+
 from qdrant_client.models import (
     VectorParams,
     Distance,
@@ -13,11 +16,11 @@ class QdrantVectorStore:
     def __init__(self):
 
         self.client = QdrantClient(
-            host="localhost",
-            port=6333
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT
         )
 
-        self.collection_name = "portfolio_knowledge"
+        self.collection_name = settings.QDRANT_COLLECTION
 
 
     def create_collection(

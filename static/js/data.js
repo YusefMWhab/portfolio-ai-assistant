@@ -20,6 +20,7 @@ const PROFILE = {
           "PostgreSQL", "Supabase",
           "OpenAI API", "Gemini API", "Prompt Engineering", "Embeddings",
           "Semantic Search", "Semantic Clustering", "NLP Pipelines",
+          "RAG (Retrieval-Augmented Generation)", "Qdrant (Vector DB)",
           "Docker", "AWS", "Git", "Linux",
           "OOP", "Async Processing", "RBAC"],
   // social / contact links shown in the "Get in touch" section
@@ -31,27 +32,57 @@ const PROFILE = {
   ]
 };
 
-/* -------------------------------------------------------------------------
-   PROJECTS
-   - description : short 1-line summary shown on the card
-   - tech         : array of strings, used for the filter chips too
-   - readme       : full write-up. Supports basic markdown:
-                    # / ## headings, **bold**, *italic*, `code`,
-                    ```code blocks```, - bullet lists, [text](url) links
-   - images       : array of paths, put files in /static/images/
-   - videos       : array of paths (mp4) or YouTube URLs, put files in /static/videos/
-   - links        : { label, url } buttons shown at the top of the case study
-                    (e.g. Live demo, GitHub repo)
-   ------------------------------------------------------------------------- */
 
 const PROJECTS = [
+  {
+    id: "Portfolio",
+    title: "AI-Powered Portfolio Assistant",
+    description: "Interactive, production-ready AI Portfolio Assistant that acts as an autonomous agent, handling user queries about my education, experience, skills, and projects in real-time",
+    tech: ["Python", "FastAPI", "Qdrant (Vector DB)", "Gemini API", "RAG (Retrieval-Augmented Generation)", "STT", "TTS", "Docker", "Nginx", "AWS EC2", "HTML/CSS/JS"],
+    links: [
+      { 
+        label: "GitHub", url: "https://github.com/YusefMWhab/portfolio-ai-assistant"
+      },
+    ],
+    images: [
+ 
+    ],
+    videos: [
+
+    ],
+    readme: `
+# AI Portfolio Assistant
+
+An interactive, production-grade AI agent that serves as a dynamic professional portfolio, 
+allowing recruiters and hiring managers to query my background, experience, skills, 
+and projects via natural voice. 
+The assistant leverages a robust RAG (Retrieval-Augmented Generation) pipeline
+ over a Qdrant vector database to ensure 100% 
+factual accuracy, while using FastAPI streaming to deliver low-latency responses.
+
+## Highlights
+- **End-to-end RAG pipeline** using Gemini embedding models and Qdrant vector database to chunk, index, and retrieve portfolio data
+- **100% factual accuracy** with zero LLM hallucinations by strictly grounding generation on verified professional documents and custom FAQs
+- **Real-time Voice-to-Voice capabilities** integrating Speech-to-Text (STT) and Text-to-Speech (TTS) flows for natural voice conversations
+- **Low-latency streaming responses** utilizing FastAPI's asynchronous streaming to deliver answers word-by-word instantly
+- **Microservices containerization** with Docker Compose, seamlessly orchestrating the API, Qdrant DB, and Nginx containers
+- **Production-ready cloud deployment** on AWS EC2 with custom domain path routing at narriq.cloud/portfolio
+- **Secure traffic encryption** using Let's Encrypt SSL/TLS certificates (HTTPS) mapped directly through the Nginx container volumes
+- **Interactive front-end** built with responsive HTML, CSS, and Vanilla JS supporting markdown rendering and direct audio recording/playback
+
+## Stack
+FastAPI backend with Qdrant vector database for semantic search, 
+Gemini API for high-performance embeddings and text generation, 
+containerized with Docker and Nginx, and deployed on AWS EC2.
+`
+  },
   {
     id: "NarrIQ",
     title: "NarrIQ | AI-Powered Market Research Automation Platform",
     description: "An AI-powered SaaS platform that automates open-ended coding, sentiment analysis, and qualitative text processing for market research workflows.",
     tech: ["Python", "Django", "PostgreSQL", "Celery", "Redis", "Nginx", "Docker", "AWS", "LLM APIs", "Embeddings", "Semantic Clustering", "JavaScript", "HTML", "CSS"],
     links: [
-      { label: "Platform", url: "https://narriq.cloud" },
+      { label: "GitHub", url: "https://github.com/YusefMWhab/narriq" },
     ],
     images: [
       "/static/images/NarrIQ-1.png",
@@ -152,7 +183,6 @@ Nginx. Frontend built with HTML/CSS/JavaScript.
 Next time I'd add real-time collaboration and export options for the
 performance dashboards from the start, instead of bolting them on after the
 core validation pipeline was already built.
-
 `
   },
 ];

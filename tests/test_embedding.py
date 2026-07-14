@@ -1,13 +1,13 @@
 import asyncio
 
-from app.ai.embeddings.gemini_embedding import GeminiEmbedding
+from app.ai.providers.gemini_provider import GeminiProvider
 
 
 async def main():
 
-    embedding = GeminiEmbedding()
+    gemini = GeminiProvider()
 
-    vector = await embedding.embed_text(
+    vector = await gemini.embed_text(
         "NarrIQ is an AI powered SaaS platform"
     )
 

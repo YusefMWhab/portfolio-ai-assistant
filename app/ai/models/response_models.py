@@ -11,4 +11,4 @@ class VoiceResponse(BaseModel):
 
     answer: str
 
-    audio_base64: str
+    remaining_questions: int

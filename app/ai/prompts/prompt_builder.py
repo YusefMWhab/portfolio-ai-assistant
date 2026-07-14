@@ -13,7 +13,7 @@ class PromptBuilder:
         if not context.strip():
             context = "No relevant portfolio information was retrieved."
 
-        if language == Language.ARABIC:
+        if "ar" in language:
             response_language = """
         ### Response Language
         The user is speaking Arabic.
@@ -31,7 +31,7 @@ class PromptBuilder:
         ### Response Language
         The user is speaking English.
 
-        Always answer in professional English.
+        Always answer in friendly English.
         """
         return f"""
 {PORTFOLIO_SYSTEM_PROMPT}

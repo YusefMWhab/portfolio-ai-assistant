@@ -1,9 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form
-from fastapi.responses import FileResponse
-from pathlib import Path
+from fastapi.responses import StreamingResponse
 
 from app.services.voice_service import VoiceService
-from app.ai.models.response_models import VoiceResponse
 
 router = APIRouter(
     prefix="/api/voice",
@@ -23,12 +21,14 @@ async def voice_chat(
         session_id
     )
 
-""" @router.get("/audio/{audio_id}")
-async def get_audio(audio_id: str):
-    audio_path = Path("static/audio/demo.m4a")
+@router.get("/AI-agent/audio-stream/{session_id}")
+async def stream_audio(session_id: str):
+    return StreamingResponse(
+        voice_service.stream_audio(session_id),
+        media_type="application/x-ndjson",
+    )
 
-    return FileResponse(
-        path=audio_path,
-        media_type="audio/mp4",
-        filename="demo.m4a"
-    ) """
+router.post("/AI-agent/end-session/{session_id}")
+async def end_session(session_id: str):
+    voice_service.end_session(session_id)
+    return {"status": "ended"}

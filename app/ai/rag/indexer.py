@@ -1,6 +1,6 @@
 from app.ai.rag.loader import KnowledgeLoader
 from app.ai.rag.chunker import MarkdownChunker
-from app.ai.embeddings.gemini_embedding import GeminiEmbedding
+from app.ai.providers.gemini_provider import GeminiProvider
 from app.ai.rag.vector_store import QdrantVectorStore
 
 
@@ -13,7 +13,7 @@ class KnowledgeIndexer:
 
         self.chunker = MarkdownChunker()
 
-        self.embedding = GeminiEmbedding()
+        self.gemini = GeminiProvider()
 
         self.vector_store = QdrantVectorStore()
 
@@ -44,7 +44,7 @@ class KnowledgeIndexer:
 
         for chunk in chunks:
 
-            vector = await self.embedding.embed_text(
+            vector = await self.gemini.embed_text(
                 chunk.content
             )
 

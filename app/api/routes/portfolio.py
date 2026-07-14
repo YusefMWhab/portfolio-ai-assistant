@@ -6,7 +6,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-@router.get("/")
+@router.get("/portfolio")
 async def home(request: Request):
     return templates.TemplateResponse(
         request=request,

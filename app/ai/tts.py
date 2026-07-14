@@ -4,6 +4,8 @@ import wave
 import base64
 import edge_tts
 import re
+import asyncio
+import json
 
 
 class TextToSpeech:
@@ -12,10 +14,41 @@ class TextToSpeech:
 
         self.gemini = GeminiProvider()
 
+    def split_text(self, text: str, max_chars: int = 100):
+
+        sentences = re.split(
+            r'(?<=[.!؟!])\s+|\n\n+',
+            text
+        )
+
+        chunks = []
+
+        current = ""
+
+        for sentence in sentences:
+
+            if len(current) + len(sentence) <= max_chars:
+                current += " " + sentence
+
+            else:
+                if current.strip():
+                    chunks.append(
+                        current.strip()
+                    )
+
+                current = sentence
+
+        if current.strip():
+            chunks.append(
+                current.strip()
+            )
+
+        return chunks
+
     async def generateAudio(self, text: str, language) -> str:
        
 
-        """ raw_pcm_bytes = await self.gemini.text_to_speech(text)
+        """    raw_pcm_bytes = await self.gemini.text_to_speech(text)
         
         # 2. السحر كله هنا: تحويل الـ Raw PCM لـ WAV سليم بالهيدرز بتاعته في الميموري
         wav_buffer = io.BytesIO()
@@ -32,31 +65,25 @@ class TextToSpeech:
         # 4. بنحوله لـ Base64 String ونرجعه
         audio_base64_str = base64.b64encode(full_wav_bytes).decode('utf-8')
         
-        return audio_base64_str  """
+        return audio_base64_str 
+        """ 
 
-        # 1. إزالة نجوم المارك داون (Bold/Italic) مثل **text** أو *text*
         text = re.sub(re.compile(r'\*+'), '', text)
         
-        # 2. إزالة علامات العناوين مثل ### أو ##
         text = re.sub(re.compile(r'#+\s*'), '', text)
         
-        # 3. إزالة الشرط بتاعة الـ Bullet points في أول السطور
         text = re.sub(re.compile(r'^\s*[-*+]\s+', re.MULTILINE), '', text)
         
-        # 4. استبدال السطور الجديدة بمسافات عشان الكلام يتدفق ورا بعضه وميقفش كتير
         text = text.replace('\n', ' ').replace('\r', ' ')
         
-        # 5. تنظيف المسافات الزيادة
         text = re.sub(re.compile(r'\s+'), ' ', text).strip()
         
         if not text:
             return ""
 
         try:
-            # تحويل الـ language لـ string وتوحيد شكلها عشان الأمان
             lang_str = str(language).lower()
 
-            # تشيك مرن: بيقبل لو جاي "ar" أو "arabic" أو "language.arabic"
             if "ar" in lang_str:
                 voice = "ar-EG-ShakirNeural"
                 current_rate = "+5%"
@@ -64,7 +91,6 @@ class TextToSpeech:
                 voice = "en-US-BrianNeural"
                 current_rate = "+15%"
 
-            # إرسال النص المتنظف مع ريت أسرع 15% للإنجاز
             communicate = edge_tts.Communicate(text, voice, rate=current_rate)
             
             audio_bytes = b""
@@ -78,3 +104,20 @@ class TextToSpeech:
         except Exception as e:
             print(f"Edge TTS Error: {str(e)}")
             raise e
+        
+    async def generateStream(self, fullAnswer: str, language):
+
+        chunks = self.split_text(fullAnswer)
+
+        for chunk in chunks:
+
+
+            audio_base64_str = await self.generateAudio(
+                    chunk,
+                    language
+                )
+
+            if not audio_base64_str:
+                continue
+
+            yield json.dumps({"audio_base64": audio_base64_str}) + "\n"

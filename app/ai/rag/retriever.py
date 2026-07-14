@@ -1,4 +1,4 @@
-from app.ai.embeddings.gemini_embedding import GeminiEmbedding
+from app.ai.providers.gemini_provider import GeminiProvider
 from app.ai.rag.vector_store import QdrantVectorStore
 
 
@@ -6,7 +6,7 @@ class Retriever:
 
     def __init__(self):
 
-        self.embedding = GeminiEmbedding()
+        self.gemini = GeminiProvider()
         self.vector_store = QdrantVectorStore()
 
     async def search(
@@ -16,7 +16,7 @@ class Retriever:
         category: str | None = None
     ):
 
-        query_vector = await self.embedding.embed_text(query)
+        query_vector = await self.gemini.embed_text(query)
 
         results = self.vector_store.search(
             vector=query_vector,

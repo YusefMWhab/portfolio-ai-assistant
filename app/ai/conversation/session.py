@@ -7,7 +7,7 @@ class SessionManager:
 
     def __init__(self):
 
-        self.sessions = {}
+        self.sessions = {}        
 
 
     def create(self) -> ConversationSession:
@@ -35,3 +35,4 @@ class SessionManager:
     ):
 
         self.sessions.pop(session_id, None)
+        print(f"End Session: {session_id}")

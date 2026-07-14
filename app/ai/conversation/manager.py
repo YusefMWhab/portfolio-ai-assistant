@@ -16,6 +16,24 @@ class ConversationManager:
 
         self.topic = TopicTracker()
 
+    def is_limit_reached(
+        self,
+        session_id: str | None
+    ):
+        
+        session = self.sessions.get(session_id)
+
+        if session is None:
+            return False
+
+        return session.has_reached_limit()
+    
+    def get_session_quota(
+        self,
+        session_id: str | None
+    ):
+        session = self.sessions.get(session_id)
+        return session.remaining_questions()
 
     def get_or_create(
         self,
@@ -48,6 +66,7 @@ class ConversationManager:
             message
         )
 
+        session.register_question()
 
     def add_assistant_message(
         self,
@@ -81,6 +100,18 @@ class ConversationManager:
             session,
             limit
         )
+    
+    def get_last_assistant_message(
+        self,
+        session_id: str
+    ) -> str | None:
+
+        session = self.sessions.get(session_id)
+
+        if session is None:
+            return None
+
+        return self.history.last_assistant_message(session)
     
     def set_language(
         self,
@@ -152,4 +183,10 @@ class ConversationManager:
             return
 
         self.topic.clear(session)
+
+    def end_session(
+        self,
+        session_id: str
+    ):
+        self.sessions.delete(session_id)
 

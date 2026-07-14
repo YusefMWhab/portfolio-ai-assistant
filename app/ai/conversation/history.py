@@ -47,3 +47,15 @@ class ConversationHistory:
     ):
 
         return session.messages[-limit:]
+    
+    def last_assistant_message(
+        self,
+        session: ConversationSession
+    ) -> str | None:
+
+        for message in reversed(session.messages):
+
+            if message.role == "assistant":
+                return message.content
+
+        return None

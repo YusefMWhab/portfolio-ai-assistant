@@ -1,23 +1,3 @@
-/* =========================================================================
-   VOICE CHAT WIDGET — push-to-talk
-   Add these script tags at the end of index.html, after your existing
-   script tags (the VAD/onnxruntime tags are no longer needed):
-
-     <script src="voice-widget.js"></script>
-
-   How it works:
-   - Press and HOLD the orb -> mic opens, recording starts
-   - Release the orb -> recording stops, the clip gets sent to your backend
-   - The reply is read aloud (Web Speech Synthesis, free, built into the
-     browser)
-   - The orb's visual state reflects idle / recording / thinking / speaking
-
-   Two things to wire up to your own backend:
-   1. TRANSCRIBE_ENDPOINT — where the recorded audio clip gets POSTed
-   2. getAIReply(text) — only needed if /transcribe returns just the raw
-      transcript; skip it if your endpoint already returns the AI's reply
-      (see the note inside sendAudioToBackend())
-   ========================================================================= */
 let sessionId = null;
 
 (function () {
@@ -37,21 +17,27 @@ let sessionId = null;
   let chunks = [];
   let isRecording = false;
 
-  // Change this to your real backend URL when you deploy
-  // (localhost only works while you're testing on your own machine).
+  // Streaming-audio playback queue: chunks arrive over time from the
+  // server, we play them back-to-back instead of firing them all at once.
+  let audioQueue = [];
+  let isPlayingAudio = false;
+  let sessionLimitReached = false;
+
+  function lockOrb() {
+    orbBtn.style.pointerEvents = "none";
+    orbBtn.style.opacity = "0.5";
+  }
+  function unlockOrb() {
+    if (sessionLimitReached) return; // stay locked once the limit is hit
+    orbBtn.style.pointerEvents = "auto";
+    orbBtn.style.opacity = "1";
+  }
+
+  // End-Points
   const TRANSCRIBE_ENDPOINT = "/api/voice/AI-agent/chat";
+  const AUDIO_GET_ENDPOINT = "/api/voice/AI-agent/audio-stream/"
 
-  // Set to true while testing locally to also download each clip so you
-  // can listen back to exactly what got sent. Turn off before you deploy.
-  const DEBUG_DOWNLOAD_RECORDING = false;
 
-  /* ----------------------------------------------------------------------
-     PLACEHOLDER — replace this with your real backend call for the AI's
-     reply. It must return a Promise that resolves to a string.
-     If your /transcribe endpoint already returns the AI's reply (not just
-     the raw transcript), you can skip this and use that text directly —
-     see the note inside sendAudioToBackend().
-     ---------------------------------------------------------------------- */
 
   // ---------------------------------------------------------------------
   // Modal open / close
@@ -66,9 +52,34 @@ let sessionId = null;
     window.speechSynthesis?.cancel();
     if (isRecording) stopRecording();
     releaseMic();
+    audioQueue = [];
+    isPlayingAudio = false;
+    unlockOrb();
     setState(null);
-    setStatus("Hold the orb to talk");
   }
+
+  // Tells the backend to drop this session's data right away instead of
+  // waiting for it to idle out. Uses sendBeacon so it still fires even
+  // as the page/tab is closing (a normal fetch can get cancelled then).
+  function endSessionOnServer() {
+    if (!sessionId) return;
+    const url = `/api/voice/AI-agent/end-session/${sessionId}`;
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([], { type: "application/json" }));
+    } else {
+      fetch(url, { method: "POST", keepalive: true }).catch(() => { });
+    }
+
+    sessionId = null;
+    sessionLimitReached = false;
+    orbBtn.style.pointerEvents = "auto";
+    orbBtn.style.opacity = "1";
+  }
+
+  // Catches the case where the user closes the whole tab/browser
+  // without explicitly closing the widget first.
+  window.addEventListener("pagehide", endSessionOnServer);
 
   fab.addEventListener("click", openModal);
   closeBtn.addEventListener("click", closeModal);
@@ -131,6 +142,10 @@ let sessionId = null;
       setStatus("Voice input isn't available in this browser");
       return;
     }
+    if (sessionLimitReached) {
+      setStatus("You've reached this conversation's question limit");
+      return;
+    }
 
     window.speechSynthesis?.cancel();
 
@@ -144,8 +159,6 @@ let sessionId = null;
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
       chunks = [];
-
-      if (DEBUG_DOWNLOAD_RECORDING) downloadAudio(blob, mediaRecorder.mimeType);
 
       sendAudioToBackend(blob);
     };
@@ -163,10 +176,6 @@ let sessionId = null;
       mediaRecorder.stop(); // onstop fires -> builds blob -> sends it
       setState("is-thinking");
       setStatus("Thinking…");
-
-      // Disable recording button
-      orbBtn.style.pointerEvents = "none";
-      orbBtn.style.opacity = "0.6";
     } else {
       setState(null);
       setStatus("Hold the orb to talk");
@@ -174,9 +183,13 @@ let sessionId = null;
   }
 
   // ---------------------------------------------------------------------
+  // Sending the recorded clip to your transcription/AI backend
   // ---------------------------------------------------------------------
   async function sendAudioToBackend(blob) {
     const ext = (mediaRecorder.mimeType.split("/")[1] || "webm").split(";")[0];
+    lockOrb();
+
+    audioQueue = [];
 
     try {
       const formData = new FormData();
@@ -184,44 +197,52 @@ let sessionId = null;
 
       if (sessionId) {
         formData.append("session_id", sessionId);
-    }
+      }
 
       const response = await fetch(TRANSCRIBE_ENDPOINT, {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error(`Server responded ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json();
+        displaySystemMessage(error.detail.message);
+        throw new Error(error.detail.error);
+        unlockOrb();
+      }
+
 
       const result = await response.json();
-      
-      // 1. Session ID 
-      sessionId = result.session_id;
-      
-      // 2. User said
-      const said = result.transcript || "";
 
-      // 3. AI Response text
+      sessionId = result.session_id;
+
+      const said = result.transcript || "";
       const textResponse = result.answer || "";
 
-      // 3. AI Response Audio bytes
-      let audio_url = null;
-        if (result.audio_base64) {
-            const cleanBase64 = result.audio_base64.replace(/\s/g, '');
-            audio_url = `data:audio/wav;base64,${cleanBase64}`;
-        }
+      // Show the text turn right away…
+      displayTranscript(said, textResponse);
 
-      // 5. Display and play Response
-      displayTranscript(said, textResponse, audio_url);
+      // …then stream and play the AI's spoken reply as it arrives.
+      setState("is-thinking");
+      setStatus("Thinking…");
+      await streamAudio(sessionId);
 
-    } 
-    catch (err) {
+      if (sessionLimitReached) {
+        setStatus("You've reached this conversation's question limit");
+      }
+
+      const remaining_questions = result.remaining_questions || 0;
+      if (remaining_questions > 0) {
+        sessionLimitReached = false;
+      }
+      else {
+        sessionLimitReached = true;
+      }
+
+    } catch (err) {
       console.error("Transcription error:", err);
       setState("is-error");
       setStatus("Couldn't reach the server — check your connection and try again");
-
-      // Enable recording button
-      orbBtn.style.pointerEvents = "auto";
-      orbBtn.style.opacity = "1";
+      unlockOrb();
       setTimeout(() => setState(null), 2200);
     }
   }
@@ -250,34 +271,105 @@ let sessionId = null;
   }
 
   // ---------------------------------------------------------------------
-  // Sending the message and speaking the reply
+  // Display the transcript + AI text turn (audio is handled separately
+  // by streamAudio/playNextAudio below)
   // ---------------------------------------------------------------------
-  async function displayTranscript(transcript, answer, audio_url) {
+  function displayTranscript(transcript, answer) {
     try {
       if (transcript) addBubble("user", transcript);
       addBubble("ai", answer);
-      playReply(audio_url);
-
     } catch (err) {
       console.error("Voice widget error:", err);
       setState("is-error");
       setStatus("Something went wrong — try again");
       setTimeout(() => setState(null), 2000);
     }
-}
+  }
 
-function playReply(audio_url) {
-    if (!audio_url) {
-        setState(null);
-        setStatus("Hold the orb to ask something else");
+  // ---------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  async function streamAudio(sessionId) {
+    const response = await fetch(`${AUDIO_GET_ENDPOINT}${sessionId}`);
 
-        // Enable recording button
-        orbBtn.style.pointerEvents = "auto";
-        orbBtn.style.opacity = "1";
-        return;
+    if (!response.ok) {
+      unlockOrb();
+        const error = await response.json();
+        displaySystemMessage(error.detail.message);
+        throw new Error("Audio stream failed")
+      }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let gotAnyValidChunk = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line && tryEnqueueNdjsonLine(line)) gotAnyValidChunk = true;
+        }
+      }
+
+      if (done) {
+        const leftover = buffer.trim();
+        if (leftover) {
+          if (tryEnqueueNdjsonLine(leftover)) gotAnyValidChunk = true;
+          else if (!gotAnyValidChunk) enqueueBase64Audio(buffer);
+        }
+        break;
+      }
+    }
+  }
+
+  // Tries to parse one line as {"audio_base64": "..."} and queue it.
+  // Returns true if it was valid NDJSON, false otherwise.
+  function tryEnqueueNdjsonLine(line) {
+    try {
+      const { audio_base64 } = JSON.parse(line);
+      if (!audio_base64) return false;
+      enqueueBase64Audio(audio_base64);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Decodes a base64 MP3 string into a playable data: URI and queues it.
+  function enqueueBase64Audio(audio_base64) {
+    if (!audio_base64) return;
+    const cleanBase64 = audio_base64.replace(/\s/g, "");
+    if (!cleanBase64) return;
+
+    const url = `data:audio/mpeg;base64,${cleanBase64}`;
+    audioQueue.push(url);
+    playNextAudio(); // no-op if something's already playing — it'll pick this up next
+  }
+
+  // ---------------------------------------------------------------------
+  // Plays queued audio chunks back-to-back, one at a time. Safe to call
+  // repeatedly — it's a no-op while something is already playing.
+  // ---------------------------------------------------------------------
+  function playNextAudio() {
+    if (isPlayingAudio) return;
+
+    if (audioQueue.length === 0) {
+      setState(null);
+      setStatus(sessionLimitReached ? "You've reached this conversation's question limit" : "Hold the orb to ask something else");
+      unlockOrb();
+      return;
     }
 
-    const audio = new Audio(audio_url);
+    const url = audioQueue.shift();
+    isPlayingAudio = true;
+
+    const audio = new Audio(url);
 
     audio.onplay = () => {
       setState("is-speaking");
@@ -285,29 +377,25 @@ function playReply(audio_url) {
     };
 
     audio.onerror = () => {
+      isPlayingAudio = false;
       setState("is-error");
       setStatus("Couldn't play audio");
+      unlockOrb();
     };
 
     audio.onended = () => {
-      setState(null);
-      setStatus("Hold the orb to ask something else");
-
-      // Enable recording button
-        orbBtn.style.pointerEvents = "auto";
-        orbBtn.style.opacity = "1";
+      isPlayingAudio = false;
+      playNextAudio(); // move on to the next queued chunk, if any
     };
 
-    audio.play().catch(err => {
-        console.error("Audio play failed:", err);
-        setState("is-error");
-        setStatus("Playback blocked or failed");
-
-        // Enable recording button
-        orbBtn.style.pointerEvents = "auto";
-        orbBtn.style.opacity = "1";
+    audio.play().catch((err) => {
+      console.error("Audio play failed:", err);
+      isPlayingAudio = false;
+      setState("is-error");
+      setStatus("Playback blocked or failed");
+      unlockOrb();
     });
-}
+  }
 
   // ---------------------------------------------------------------------
   // Wiring: press-and-hold on the orb (mouse + touch), typed fallback
@@ -327,17 +415,6 @@ function playReply(audio_url) {
   }
 })();
 
-// ---------------------------------------------------------------------
-// Debug helper — downloads the exact clip that gets sent to the backend,
-// so you can listen back and confirm recording quality. Controlled by
-// DEBUG_DOWNLOAD_RECORDING above; turn that off before deploying.
-// ---------------------------------------------------------------------
-function downloadAudio(blob, mimeType) {
-  const ext = (mimeType.split("/")[1] || "webm").split(";")[0];
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `recording.${ext}`;
-  a.click();
-  URL.revokeObjectURL(url);
+function displaySystemMessage(message) {
+  displayTranscript("", message);
 }

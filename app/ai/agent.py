@@ -6,6 +6,8 @@ from app.ai.prompts.prompt_builder import PromptBuilder
 from app.ai.conversation.query_rewriter import SearchQueryRewriter
 from app.ai.conversation.manager import ConversationManager
 
+import logging
+logger = logging.getLogger(__name__)
 
 class PortfolioAgent:
 
@@ -52,12 +54,12 @@ class PortfolioAgent:
 
         category = await self.classifier.classify(question)
 
-        print("Original:", original_question)
-        print("Rewritten:", question)
-        print("Category:", category)
-        print("Session:", session_id)
-        print("Topic before:", self.conversation.current_topic(session_id))
-        print("Language:", language)
+        logger.info(f"Original: {original_question}")
+        logger.info(f"Rewritten: {question}")
+        logger.info(f"Category: {category}")
+        logger.info(f"Session: {session_id}")
+        logger.info(f"Topic before: {self.conversation.current_topic(session_id)}")
+        logger.info(f"Language: {language}")
 
         # Retrieve
         results = await self.retriever.search(
@@ -69,23 +71,20 @@ class PortfolioAgent:
             session_id,
             results
         )
-
-        print("Session:", session_id)
-        print("Topic after:", self.conversation.current_topic(session_id))
         
         # Build Context
         context = self.context_builder.build(results)
 
         # Prompt
         prompt = self.prompt_builder.build(
-            question=question,
+            question=original_question,
             context=context,
             language=language
         )
+
+        logger.info(f"Prompt: {prompt}")
         answer = await self.llm.generate_text(prompt)
 
         self.conversation.add_assistant_message(session_id=session_id, message=answer)
-
-        
 
         return answer

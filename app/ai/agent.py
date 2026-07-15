@@ -77,7 +77,8 @@ class PortfolioAgent:
 
         # Prompt
         prompt = self.prompt_builder.build(
-            question=original_question,
+            user_question=original_question,
+            rewritten_question=question,
             context=context,
             language=language
         )

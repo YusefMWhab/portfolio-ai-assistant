@@ -5,7 +5,8 @@ class PromptBuilder:
 
     def build(
         self,
-        question: str,
+        user_question: str,
+        rewritten_question: str,
         context: str,
         language
     ) -> str:
@@ -21,8 +22,6 @@ class PromptBuilder:
         Always answer in fluent Egyptian Local friendly Arabic.
 
         Keep all technical terms (Python, FastAPI, Docker, RAG, etc.) in English when appropriate.
-
-        Do not answer in English unless the user explicitly asks.
         """
 
         else:
@@ -42,7 +41,10 @@ class PromptBuilder:
 {context}
 
 ### User Question
-{question}
+{user_question}
+
+### Re-written Question
+{rewritten_question}
 
 ### Assistant Answer
 """
